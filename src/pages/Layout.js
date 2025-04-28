@@ -9,10 +9,11 @@ const Layout = ({ children }) => {
           {/* <h1 className="app-name">Arbitrage App</h1> */}
           <nav>
             <ul>
-              <li><a href="#">Home</a></li>
-              <li><a href="#">About</a></li>
-              <li><a href="#">Services</a></li>
-              <li><a href="#">Contact</a></li>
+              <li><a href="#">Dashboard</a></li>
+              <li><a href="#">Balance</a></li>
+              <li><a href="#">Arbitrage</a></li>
+              <li><a href="#">Rate</a></li>
+              <li><a href="#">TradeLog</a></li>
             </ul>
           </nav>
         </div>
