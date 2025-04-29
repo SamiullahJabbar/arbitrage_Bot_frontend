@@ -22,7 +22,7 @@ const TradeLog = () => {
     loadTradeLogs();
   }, [loadTradeLogs]);
 
-  const filteredLogs = tradeLogs.filter(log => 
+  const filteredLogs = tradeLogs.filter(log =>
     log.pair.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.buy_exchange.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.sell_exchange.toLowerCase().includes(searchQuery.toLowerCase())
@@ -42,64 +42,63 @@ const TradeLog = () => {
       <style>
         {`
           .trade-log-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            overflow: hidden;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          }
-          
+  width: 100%;
+  max-width: 1600px; /* Increased max-width */
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  font-family: 'Inter', sans-serif;
+  padding: 30px; /* Increased padding for more space */
+}
+
+
           .header {
-            padding: 24px;
+            padding: 20px;
             border-bottom: 1px solid #f0f2f5;
-          }
-          
-          .title {
-            font-size: 22px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #1a1a1a;
-          }
-          
-          .subtitle {
-            font-size: 14px;
-            color: #6b7280;
-            font-weight: 400;
-          }
-          
-          .controls {
             display: flex;
-            gap: 12px;
-            margin-top: 20px;
-            flex-wrap: wrap;
+            justify-content: space-between;
             align-items: center;
           }
-          
+
+          .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+          }
+
+          .subtitle {
+            font-size: 16px;
+            color: #777;
+          }
+
+          .controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+          }
+
           .search-container {
+            position: relative;
             flex: 1;
             min-width: 240px;
-            position: relative;
           }
-          
+
           .search-input {
             width: 100%;
-            padding: 10px 16px 10px 40px;
+            padding: 12px 40px;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
             font-size: 14px;
-            transition: all 0.2s;
             background-color: #f9fafb;
           }
-          
+
           .search-input:focus {
             outline: none;
             border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
             background-color: white;
           }
-          
+
           .search-icon {
             position: absolute;
             left: 14px;
@@ -107,121 +106,107 @@ const TradeLog = () => {
             transform: translateY(-50%);
             color: #9ca3af;
           }
-          
+
           .time-filters {
             display: flex;
-            gap: 8px;
+            gap: 12px;
+            padding: 6px 12px;
             background: #f3f4f6;
-            padding: 4px;
             border-radius: 8px;
+            align-items: center;
           }
-          
+
           .time-filter {
             padding: 8px 16px;
-            border-radius: 6px;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: 0.3s;
             color: #4b5563;
+            border-radius: 8px;
           }
-          
+
           .time-filter:hover {
             background: #e5e7eb;
           }
-          
+
           .time-filter.active {
             background: #3b82f6;
             color: white;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           }
-          
+
           .table-container {
+            margin-top: 20px;
             overflow-x: auto;
-            padding: 0 8px;
           }
-          
+
           table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
+            border-collapse: collapse;
+            margin-top: 20px;
           }
-          
+
           th {
-            padding: 14px 16px;
+            padding: 14px;
             text-align: left;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
             background: #f9fafb;
             border-bottom: 1px solid #f0f2f5;
-            position: sticky;
-            top: 0;
           }
-          
+
           td {
-            padding: 16px;
-            border-bottom: 1px solid #f0f2f5;
+            padding: 14px;
             font-size: 14px;
             color: #374151;
+            border-bottom: 1px solid #f0f2f5;
           }
-          
+
           tr:hover td {
             background-color: #f8fafc;
           }
-          
+
           .pair-cell {
             font-weight: 500;
             color: #111827;
           }
-          
+
           .exchanges {
             display: flex;
             align-items: center;
             gap: 8px;
           }
-          
+
           .exchange-name {
             font-weight: 500;
           }
-          
+
           .prices {
             display: flex;
             gap: 16px;
           }
-          
-          .price {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-          
+
           .price-value {
             font-weight: 500;
           }
-          
+
           .profit {
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 6px;
-            font-weight: 500;
           }
-          
+
           .profit.positive {
             color: #059669;
           }
-          
+
           .profit.negative {
             color: #dc2626;
           }
-          
-          .profit-percent {
-            font-size: 13px;
-            opacity: 0.9;
-          }
-          
+
           .status {
             display: inline-flex;
             align-items: center;
@@ -229,73 +214,37 @@ const TradeLog = () => {
             padding: 6px 12px;
             border-radius: 12px;
             font-size: 13px;
-            font-weight: 500;
           }
-          
+
           .status.running {
             background: #dbeafe;
             color: #1d4ed8;
           }
-          
+
           .status.completed {
             background: #d1fae5;
             color: #059669;
           }
-          
+
           .status.failed {
             background: #fee2e2;
             color: #dc2626;
           }
-          
+
           .action-btn {
-            color: #3b82f6;
             display: flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
             font-weight: 500;
-            transition: color 0.2s;
+            color: #3b82f6;
+            transition: color 0.3s;
           }
-          
+
           .action-btn:hover {
             color: #2563eb;
           }
-          
-          .footer {
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            color: #6b7280;
-            border-top: 1px solid #f0f2f5;
-          }
-          
-          .pagination {
-            display: flex;
-            gap: 8px;
-          }
-          
-          .pagination-btn {
-            padding: 8px 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-            background: white;
-          }
-          
-          .pagination-btn:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
-          }
-          
-          .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-          
+
           .loading-container {
             padding: 60px;
             display: flex;
@@ -304,7 +253,7 @@ const TradeLog = () => {
             justify-content: center;
             gap: 12px;
           }
-          
+
           .loading-spinner {
             width: 40px;
             height: 40px;
@@ -313,7 +262,7 @@ const TradeLog = () => {
             border-radius: 50%;
             animation: spin 1s linear infinite;
           }
-          
+
           .empty-state {
             padding: 60px;
             display: flex;
@@ -323,36 +272,37 @@ const TradeLog = () => {
             gap: 12px;
             text-align: center;
           }
-          
+
           .empty-icon {
             width: 48px;
             height: 48px;
             color: #9ca3af;
           }
-          
+
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
-          
+
           @media (max-width: 768px) {
             .header {
               padding: 16px;
             }
-            
+
             .controls {
               flex-direction: column;
+              align-items: flex-start;
             }
-            
+
             .search-container {
               width: 100%;
             }
-            
+
             .time-filters {
               width: 100%;
               justify-content: space-between;
             }
-            
+
             td, th {
               padding: 12px;
             }
@@ -361,9 +311,10 @@ const TradeLog = () => {
       </style>
 
       <div className="header">
-        <h1 className="title">Trade History</h1>
-        <p className="subtitle">Recent arbitrage trades</p>
-        
+        <div>
+          <h1 className="title">Trade History</h1>
+          <p className="subtitle">Recent arbitrage trades</p>
+        </div>
         <div className="controls">
           <div className="search-container">
             <FiSearch className="search-icon" size={18} />
@@ -375,7 +326,7 @@ const TradeLog = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <div className="time-filters">
             {['24h', '7d', '30d', 'All'].map((filter) => (
               <div
@@ -389,7 +340,7 @@ const TradeLog = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="table-container">
         {isLoading ? (
           <div className="loading-container">
@@ -421,7 +372,6 @@ const TradeLog = () => {
               {filteredLogs.map((log, index) => (
                 <tr key={index}>
                   <td className="pair-cell">{log.pair}</td>
-                  
                   <td>
                     <div className="exchanges">
                       <span className="exchange-name">{log.buy_exchange}</span>
@@ -429,7 +379,6 @@ const TradeLog = () => {
                       <span className="exchange-name">{log.sell_exchange}</span>
                     </div>
                   </td>
-                  
                   <td>
                     <div className="prices">
                       <div className="price">
@@ -440,7 +389,6 @@ const TradeLog = () => {
                       </div>
                     </div>
                   </td>
-                  
                   <td>
                     <div className={`profit ${log.profit >= 0 ? 'positive' : 'negative'}`}>
                       {log.profit >= 0 ? (
@@ -452,15 +400,12 @@ const TradeLog = () => {
                       <span className="profit-percent">({(log.profit / log.buy_price * 100).toFixed(2)}%)</span>
                     </div>
                   </td>
-                  
                   <td>
                     <span className={`status ${log.status.toLowerCase()}`}>
                       {log.status}
                     </span>
                   </td>
-                  
                   <td>{log.duration ? `${log.duration} min` : '—'}</td>
-                  
                   <td>
                     <div className="action-btn">
                       <FiInfo size={16} />
@@ -473,7 +418,7 @@ const TradeLog = () => {
           </table>
         )}
       </div>
-      
+
       <div className="footer">
         <div>Showing 1 to {filteredLogs.length} of {filteredLogs.length} trades</div>
         <div className="pagination">
