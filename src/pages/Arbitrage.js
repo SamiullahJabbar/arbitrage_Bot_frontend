@@ -3,15 +3,20 @@ import { fetchArbitrageData } from '../services/api';
 
 const Arbitrage = () => {
   const [arbitrageData, setArbitrageData] = useState(null);
+  const [previousData, setPreviousData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     const getArbitrageData = async () => {
       try {
         setIsLoading(true);
         const data = await fetchArbitrageData();
+        setPreviousData(arbitrageData);
         setArbitrageData(data);
+        setLastUpdated(new Date());
+        setError(null);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -20,9 +25,8 @@ const Arbitrage = () => {
     };
 
     getArbitrageData();
-    const interval = setInterval(getArbitrageData, 180000); // API call every 3 minutes
-
-    return () => clearInterval(interval); // Clean up interval on component unmount
+    const interval = setInterval(getArbitrageData, 300000);
+    return () => clearInterval(interval);
   }, []);
 
   const formatNumber = (num) => {
@@ -34,16 +38,20 @@ const Arbitrage = () => {
   };
 
   const getProfitColor = (percent) => {
-    if (!percent) return 'text-red-500';
-    if (percent > 0.5) return 'text-green-600';
-    if (percent > 0.2) return 'text-green-500';
-    if (percent > 0) return 'text-green-400';
-    return 'text-red-500';
+    if (!percent) return 'profit-negative';
+    if (percent > 0.5) return 'profit-high';
+    if (percent > 0.2) return 'profit-medium';
+    if (percent > 0) return 'profit-low';
+    return 'profit-negative';
   };
 
   const getStatusColor = (status) => {
-    if (!status) return 'inactive';
-    return status.toLowerCase();
+    if (!status) return 'status-inactive';
+    return `status-${status.toLowerCase()}`;
+  };
+
+  const getFilterStatusColor = (passed) => {
+    return passed ? 'filter-passed' : 'filter-failed';
   };
 
   const isVolumeInRange = (data) => {
@@ -61,23 +69,44 @@ const Arbitrage = () => {
   };
 
   const getVolumeStatusColor = (data) => {
-    if (!data) return 'text-gray-500';
+    if (!data) return 'volume-neutral';
     const volume = data.total_volume;
-    if (volume >= 500000 && volume <= 1000000) return 'text-green-500';
-    return 'text-red-500';
+    if (volume >= 500000 && volume <= 1000000) return 'volume-valid';
+    return 'volume-invalid';
   };
+
+  const formatTimeSinceUpdate = (date) => {
+    if (!date) return 'Just now';
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    if (seconds < 60) return `${seconds} seconds ago`;
+    if (seconds < 120) return '1 minute ago';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 7200) return '1 hour ago';
+    return `${Math.floor(seconds / 3600)} hours ago`;
+  };
+
+  const displayData = arbitrageData || previousData;
 
   return (
     <div className="arbitrage-container">
       <div className="arbitrage-header">
-        <h2 className="arbitrage-title">Arbitrage Opportunities</h2>
-        <div className="refresh-indicator">
-          <span className="material-icons">refresh</span>
-          <span>Updates every 3 minutes</span>
+        <h2>Arbitrage Opportunities</h2>
+        <div className="refresh-info">
+          <div className="refresh-indicator">
+            <span className="material-icons">refresh</span>
+            {/* <span>Updates every 5 minutes</span> */}
+          </div>
+          {lastUpdated && (
+            <div className="update-time">
+              Last updated: {formatTimeSinceUpdate(lastUpdated)}
+              {isLoading && <span className="updating-text"> (Updating...)</span>}
+            </div>
+          )}
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && !displayData ? (
         <div className="loading-state">
           <div className="spinner"></div>
           <p>Scanning exchanges for opportunities...</p>
@@ -93,115 +122,90 @@ const Arbitrage = () => {
             Retry
           </button>
         </div>
-      ) : arbitrageData ? (
+      ) : displayData && displayData.opportunities && displayData.opportunities.length > 0 ? (
         <div className="arbitrage-grid">
-          {/* Main Opportunity Card */}
-          <div className="opportunity-card">
-            <div className="card-header">
-              <h3>{arbitrageData.pair || 'N/A'}</h3>
-              <span className={`profit-badge ${getProfitColor(arbitrageData.profit_percent)}`}>
-                {arbitrageData.profit_percent > 0 ? '+' : ''}
-                {arbitrageData.profit_percent ? (arbitrageData.profit_percent * 100).toFixed(2) : '0.00'}%
-              </span>
-            </div>
-            
-            <div className="price-comparison">
-              <div className="buy-info">
-                <div className="exchange-label">Best Buy</div>
-                <div className="exchange-name">{arbitrageData.best_buy?.exchange || 'N/A'}</div>
-                <div className="price">${formatNumber(arbitrageData.best_buy?.price)}</div>
+          {displayData.opportunities.map((opportunity, index) => (
+            <div key={index} className="opportunity-card">
+              <div className="card-header">
+                <h3>{opportunity.pair || 'N/A'}</h3>
+                <div className={`profit-badge ${getProfitColor(opportunity.profit_percent)}`}>
+                  {opportunity.profit_percent > 0 ? '+' : ''}
+                  {formatNumber(opportunity.profit_percent * 100)}%
+                </div>
               </div>
               
-              <div className="vs-separator">
-                <div className="line"></div>
-                <span>VS</span>
-                <div className="line"></div>
+              <div className="price-comparison">
+                <div className="exchange-info buy-info">
+                  <div className="exchange-label">Best Buy</div>
+                  <div className="exchange-name">{opportunity.best_buy?.exchange || 'N/A'}</div>
+                  <div className="price">${formatNumber(opportunity.best_buy?.price)}</div>
+                </div>
+                
+                <div className="vs-separator">
+                  <div className="line"></div>
+                  <span>VS</span>
+                  <div className="line"></div>
+                </div>
+                
+                <div className="exchange-info sell-info">
+                  <div className="exchange-label">Best Sell</div>
+                  <div className="exchange-name">{opportunity.best_sell?.exchange || 'N/A'}</div>
+                  <div className="price">${formatNumber(opportunity.best_sell?.price)}</div>
+                </div>
               </div>
               
-              <div className="sell-info">
-                <div className="exchange-label">Best Sell</div>
-                <div className="exchange-name">{arbitrageData.best_sell?.exchange || 'N/A'}</div>
-                <div className="price">${formatNumber(arbitrageData.best_sell?.price)}</div>
+              <div className="opportunity-details">
+                <div className="detail-row">
+                  <span>Spread:</span>
+                  <span>${formatNumber(opportunity.spread)}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Profit Percentage:</span>
+                  <span className={getProfitColor(opportunity.profit_percent)}>
+                    {opportunity.profit_percent > 0 ? '+' : ''}
+                    {formatNumber(opportunity.profit_percent * 100)}%
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Total Volume:</span>
+                  <span className={getVolumeStatusColor(opportunity)}>
+                    ${formatNumber(opportunity.total_volume)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Volume Status:</span>
+                  <span className={getVolumeStatusColor(opportunity)}>
+                    {getVolumeStatus(opportunity)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Status:</span>
+                  <span className={getStatusColor(opportunity.status)}>
+                    {opportunity.status || 'N/A'}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Passed Filters:</span>
+                  <span className={getFilterStatusColor(opportunity.passed_filters)}>
+                    {opportunity.passed_filters ? 'Yes' : 'No'}
+                  </span>
+                </div>
+                {opportunity.message && (
+                  <div className="detail-row message">
+                    <span>Message:</span>
+                    <span>{opportunity.message}</span>
+                  </div>
+                )}
               </div>
-            </div>
-            
-            <div className="spread-info">
-              <div className="spread-item">
-                <span>Spread:</span>
-                <span>${formatNumber(arbitrageData.spread)}</span>
-              </div>
-              <div className="spread-item">
-                <span>Profit Percentage:</span>
-                <span>
-                  {arbitrageData.profit_percent > 0 ? '+' : ''}
-                  {(arbitrageData.profit_percent * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="spread-item">
-                <span>Total Volume:</span>
-                <span className={getVolumeStatusColor(arbitrageData)}>
-                  ${formatNumber(arbitrageData.total_volume)}
-                </span>
-              </div>
-              <div className="spread-item">
-                <span>Volume Status:</span>
-                <span className={getVolumeStatusColor(arbitrageData)}>
-                  {getVolumeStatus(arbitrageData)}
-                </span>
-              </div>
-            </div>
 
-            {/* Execute Trade Button - Only shown when volume is in range */}
-            {isVolumeInRange(arbitrageData) && (
-              <button className="execute-button">
-                <span className="material-icons">bolt</span>
-                Execute Arbitrage Trade
-              </button>
-            )}
-          </div>
-          
-          {/* Status & Details */}
-          <div className="status-card">
-            <h3 className="card-title">Trade Status</h3>
-            <div className="status-item">
-              <span>Status:</span>
-              <span className={`status-value ${getStatusColor(arbitrageData.status)}`}>
-                {arbitrageData.status || 'N/A'}
-              </span>
+              {isVolumeInRange(opportunity) && (
+                <button className="execute-button">
+                  <span className="material-icons">bolt</span>
+                  Execute Arbitrage Trade
+                </button>
+              )}
             </div>
-            <div className="status-item">
-              <span>Threshold:</span>
-              <span>{formatNumber(arbitrageData.threshold)}%</span>
-            </div>
-            <div className="status-item">
-              <span>Min Volume:</span>
-              <span>${formatNumber(arbitrageData.min_volume)}</span>
-            </div>
-            <div className="status-item">
-              <span>Volume Range:</span>
-              <span>500K - 1M USDT</span>
-            </div>
-            {arbitrageData.timestamp && (
-              <div className="status-item">
-                <span>Last Updated:</span>
-                <span>{new Date(arbitrageData.timestamp).toLocaleString()}</span>
-              </div>
-            )}
-            {arbitrageData.volume_message && (
-              <div className="status-message">
-                <span className="material-icons">info</span>
-                <p>{arbitrageData.volume_message}</p>
-              </div>
-            )}
-            {arbitrageData.passed_filters !== undefined && (
-              <div className="status-item">
-                <span>Passed Filters:</span>
-                <span className={arbitrageData.passed_filters ? 'text-green-500' : 'text-red-500'}>
-                  {arbitrageData.passed_filters ? 'Yes' : 'No'}
-                </span>
-              </div>
-            )}
-          </div>
+          ))}
         </div>
       ) : (
         <div className="no-data">
@@ -210,17 +214,18 @@ const Arbitrage = () => {
         </div>
       )}
 
-      {/* Custom CSS */}
       <style jsx>{`
+        /* Arbitrage Container */
         .arbitrage-container {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          background: white;
+          font-family: 'Arial', sans-serif;
+          background-color: #f7f7f7;
           border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-          padding: 24px;
+          padding: 20px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           margin-bottom: 30px;
         }
-        
+
+        /* Header Section */
         .arbitrage-header {
           display: flex;
           justify-content: space-between;
@@ -228,36 +233,50 @@ const Arbitrage = () => {
           margin-bottom: 20px;
         }
         
-        .arbitrage-title {
-          color: #1a237e;
-          font-size: 1.5rem;
-          font-weight: 600;
-          margin: 0;
+        .arbitrage-header h2 {
+          font-size: 24px;
+          color: #333;
+          font-weight: bold;
         }
-        
+
+        /* Refresh Info */
+        .refresh-info {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+        }
+
         .refresh-indicator {
           display: flex;
           align-items: center;
-          color: #64748b;
-          font-size: 0.85rem;
+          font-size: 14px;
+          color: #888;
         }
-        
+
         .refresh-indicator .material-icons {
-          font-size: 1rem;
+          font-size: 18px;
           margin-right: 6px;
-          color: #6366f1;
         }
-        
+
+        .update-time {
+          font-size: 12px;
+          color: #555;
+        }
+
+        .updating-text {
+          color: #2c87fc;
+          font-weight: 600;
+        }
+
         /* Loading State */
         .loading-state {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
           padding: 40px;
-          color: #64748b;
+          color: #888;
         }
-        
+
         .spinner {
           border: 3px solid rgba(99, 102, 241, 0.2);
           border-top: 3px solid #6366f1;
@@ -267,287 +286,264 @@ const Arbitrage = () => {
           animation: spin 1s linear infinite;
           margin-bottom: 16px;
         }
-        
+
         /* Error State */
         .error-state {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
           padding: 30px;
           color: #ef4444;
-          text-align: center;
         }
-        
+
         .error-state .material-icons {
           font-size: 2rem;
           margin-bottom: 12px;
         }
-        
+
         .retry-button {
           background: #6366f1;
           color: white;
-          border: none;
           padding: 8px 16px;
           border-radius: 6px;
-          margin-top: 16px;
           cursor: pointer;
-          font-weight: 500;
-          transition: background 0.2s;
+          border: none;
+          margin-top: 12px;
         }
-        
-        .retry-button:hover {
-          background: #4f46e5;
-        }
-        
-        /* No Data State */
+
+        /* No Data */
         .no-data {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           padding: 40px;
-          color: #64748b;
-          text-align: center;
+          color: #888;
         }
-        
+
         .no-data .material-icons {
           font-size: 2rem;
           margin-bottom: 12px;
           color: #94a3b8;
         }
-        
+
         /* Arbitrage Grid */
         .arbitrage-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
           gap: 20px;
         }
-        
+
         /* Opportunity Card */
         .opportunity-card {
-          background: #f8fafc;
+          background: #ffffff;
           border-radius: 10px;
           padding: 20px;
-          border-left: 4px solid #6366f1;
-          position: relative;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
         }
-        
+
         .card-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 20px;
         }
-        
+
         .card-header h3 {
-          font-size: 1.2rem;
-          color: #1e293b;
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
           margin: 0;
         }
-        
+
         .profit-badge {
-          font-size: 0.9rem;
+          font-size: 14px;
           font-weight: 600;
-          padding: 4px 10px;
+          padding: 6px 12px;
           border-radius: 20px;
-          background: rgba(16, 185, 129, 0.1);
         }
-        
-        .text-green-600 { color: #059669; }
-        .text-green-500 { color: #10b981; }
-        .text-green-400 { color: #34d399; }
-        .text-red-500 { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-        .text-gray-500 { color: #64748b; }
-        
+
+        .profit-high {
+          background-color: #10b981;
+          color: white;
+        }
+
+        .profit-medium {
+          background-color: #22c55e;
+          color: white;
+        }
+
+        .profit-low {
+          background-color: #4ade80;
+          color: white;
+        }
+
+        .profit-negative {
+          background-color: #ef4444;
+          color: white;
+        }
+
+        /* Price Comparison */
         .price-comparison {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 20px;
         }
-        
-        .buy-info, .sell-info {
-          flex: 1;
+
+        .exchange-info {
           text-align: center;
+          flex: 1;
         }
-        
+
+        .buy-info {
+          color: #ef4444;
+        }
+
+        .sell-info {
+          color: #10b981;
+        }
+
         .exchange-label {
-          font-size: 0.85rem;
-          color: #64748b;
+          font-size: 14px;
+          color: #666;
           margin-bottom: 6px;
         }
-        
+
         .exchange-name {
-          font-weight: 600;
-          color: #1e293b;
+          font-size: 14px;
+          font-weight: 500;
+          color: #444;
           margin-bottom: 8px;
         }
-        
+
         .price {
-          font-size: 1.3rem;
-          font-weight: 700;
-          color: #1e293b;
+          font-size: 18px;
+          font-weight: bold;
         }
-        
+
         .vs-separator {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 0 15px;
+          padding: 0 10px;
         }
-        
+
+        .vs-separator span {
+          font-size: 12px;
+          color: #888;
+          padding: 4px 0;
+        }
+
         .vs-separator .line {
           height: 1px;
-          width: 30px;
-          background: #e2e8f0;
-          margin: 5px 0;
+          width: 20px;
+          background-color: #ddd;
+          margin: 2px 0;
         }
-        
-        .vs-separator span {
-          font-size: 0.8rem;
-          color: #94a3b8;
-          font-weight: 600;
-        }
-        
-        .spread-info {
+
+        /* Opportunity Details */
+        .opportunity-details {
           display: flex;
           flex-direction: column;
-          background: white;
-          padding: 12px 15px;
-          border-radius: 8px;
-          margin-top: 15px;
-          gap: 8px;
+          margin-top: 10px;
         }
-        
-        .spread-item {
+
+        .detail-row {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          margin: 6px 0;
+          font-size: 14px;
         }
-        
-        .spread-item span:first-child {
-          font-size: 0.8rem;
-          color: #64748b;
+
+        .detail-row span:first-child {
+          color: #666;
         }
-        
-        .spread-item span:last-child {
-          font-weight: 600;
-          color: #1e293b;
+
+        .detail-row span:last-child {
+          font-weight: 500;
         }
-        
+
+        .message {
+          flex-direction: column;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px dashed #eee;
+        }
+
+        .message span:last-child {
+          font-size: 13px;
+          color: #666;
+          font-weight: normal;
+          margin-top: 4px;
+        }
+
+        /* Status Colors */
+        .status-filtered {
+          color: #f59e0b;
+        }
+
+        .status-active {
+          color: #10b981;
+        }
+
+        .status-inactive {
+          color: #9ca3af;
+        }
+
+        /* Filter Status Colors */
+        .filter-passed {
+          color: #10b981;
+        }
+
+        .filter-failed {
+          color: #ef4444;
+        }
+
+        /* Volume Status Colors */
+        .volume-valid {
+          color: #10b981;
+        }
+
+        .volume-invalid {
+          color: #ef4444;
+        }
+
+        .volume-neutral {
+          color: #9ca3af;
+        }
+
         /* Execute Button */
         .execute-button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 100%;
-          background: linear-gradient(135deg, #4f46e5, #6366f1);
+          background: #4f46e5;
           color: white;
           border: none;
           padding: 12px;
-          border-radius: 8px;
-          margin-top: 20px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
-        }
-        
-        .execute-button:hover {
-          background: linear-gradient(135deg, #4338ca, #4f46e5);
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .execute-button .material-icons {
-          margin-right: 8px;
-          font-size: 1.1rem;
-        }
-        
-        /* Status Card */
-        .status-card {
-          background: #f8fafc;
-          border-radius: 10px;
-          padding: 20px;
-        }
-        
-        .status-item {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 12px;
-        }
-        
-        .status-item span:first-child {
-          color: #64748b;
-          font-size: 0.9rem;
-        }
-        
-        .status-item span:last-child {
-          font-weight: 500;
-          color: #1e293b;
-        }
-        
-        .status-value {
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 4px;
-        }
-        
-        .status-value.active {
-          color: #10b981;
-          background: rgba(16, 185, 129, 0.1);
-        }
-        
-        .status-value.inactive {
-          color: #64748b;
-          background: rgba(100, 116, 139, 0.1);
-        }
-        
-        .status-value.error {
-          color: #ef4444;
-          background: rgba(239, 68, 68, 0.1);
-        }
-        
-        .status-value.filtered {
-          color: #f59e0b;
-          background: rgba(245, 158, 11, 0.1);
-        }
-        
-        .status-message {
-          display: flex;
-          background: rgba(99, 102, 241, 0.1);
-          padding: 12px;
           border-radius: 8px;
           margin-top: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s;
         }
-        
-        .status-message .material-icons {
-          color: #6366f1;
-          margin-right: 10px;
-          font-size: 1.2rem;
+
+        .execute-button:hover {
+          background: #4338ca;
         }
-        
-        .status-message p {
-          margin: 0;
-          font-size: 0.9rem;
-          color: #475569;
+
+        .execute-button .material-icons {
+          font-size: 18px;
+          margin-right: 6px;
         }
-        
+
+        /* Animations */
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
-          .arbitrage-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-          }
-          
-          .arbitrage-grid {
-            grid-template-columns: 1fr;
-          }
         }
       `}</style>
     </div>

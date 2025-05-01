@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [selectedExchange, setSelectedExchange] = useState('binance');
   const [isLoading, setIsLoading] = useState(true);
   const [previousRates, setPreviousRates] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -17,6 +18,7 @@ const Dashboard = () => {
       const data = await fetchRates();
       setPreviousRates(rates); // Store current rates as previous before updating
       setRates(data);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error("Error fetching rates:", error);
     } finally {
@@ -29,7 +31,7 @@ const Dashboard = () => {
     fetchData();
 
     // Set up interval for refreshing data every 2 minutes (120,000 ms)
-    const intervalId = setInterval(fetchData, 120000); // 120000 ms = 2 minutes
+    const intervalId = setInterval(fetchData, 120000);
 
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
@@ -46,8 +48,6 @@ const Dashboard = () => {
     }
     const previousSpot = parseFloat(previousRates.data.spot[selectedExchange][crypto]);
     const change = ((currentSpot - previousSpot) / previousSpot) * 100;
-
-    // Handle small changes and format
     return change.toFixed(2);  // Rounding the value to 2 decimal places
   };
 
@@ -62,6 +62,18 @@ const Dashboard = () => {
       return `$${(num/1000000).toFixed(1)}M`;
     }
     return `$${num.toLocaleString()}`;
+  };
+
+  // Format time since last update
+  const formatTimeSinceUpdate = (date) => {
+    if (!date) return 'Just now';
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    if (seconds < 60) return `${seconds} seconds ago`;
+    if (seconds < 120) return '1 minute ago';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 7200) return '1 hour ago';
+    return `${Math.floor(seconds / 3600)} hours ago`;
   };
 
   return (
@@ -81,7 +93,15 @@ const Dashboard = () => {
           <div className="section-header">
             <div className="title-container">
               <h2>Live Crypto Rates</h2>
-              <p className="subtitle">Real-time market data updated every 2 minutes</p>
+              <div className="update-info">
+                <p className="subtitle">Real-time market data</p>
+                {lastUpdated && (
+                  <p className="update-time">
+                    Updated {formatTimeSinceUpdate(lastUpdated)}
+                    {isLoading && <span className="updating-indicator"> (Updating...)</span>}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="exchange-selector">
               <div className="selector-label">
@@ -107,7 +127,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && !rates ? (
             <div className="loading-state">
               <div className="loading-spinner"></div>
               <p>Loading market data...</p>
@@ -117,10 +137,10 @@ const Dashboard = () => {
               <table className="rates-table">
                 <thead>
                   <tr>
-                    <th className="coin-header">CON</th>
+                    <th className="coin-header">COIN</th>
                     <th>SPOT PRICE</th>
                     <th>FUTURES PRICE</th>
-                    <th>VOLUME (24H)</th>
+                    <th className="volume-header">VOLUME (24H)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,7 +210,7 @@ const Dashboard = () => {
           .rates-section, .balance-section, .tradelog-section, .arbitrage-section {
             background-color: white;
             border-radius: 12px;
-            padding: 25px;
+            padding: 20px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           }
 
@@ -202,10 +222,10 @@ const Dashboard = () => {
           .section-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 25px;
+            align-items: flex-start;
+            margin-bottom: 20px;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 15px;
           }
 
           .title-container h2 {
@@ -215,10 +235,27 @@ const Dashboard = () => {
             font-weight: 700;
           }
 
+          .update-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+
           .subtitle {
             color: #718096;
             font-size: 0.85rem;
             margin: 0;
+          }
+
+          .update-time {
+            color: #718096;
+            font-size: 0.75rem;
+            margin: 0;
+          }
+
+          .updating-indicator {
+            color: #667eea;
+            font-weight: 500;
           }
 
           .exchange-selector {
@@ -259,17 +296,19 @@ const Dashboard = () => {
             overflow-x: auto;
             border-radius: 8px;
             border: 1px solid #edf2f7;
+            -webkit-overflow-scrolling: touch;
           }
 
           .rates-table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px;
           }
 
           .rates-table th {
             background-color: #f8fafc;
             color: #4a5568;
-            padding: 15px;
+            padding: 12px 15px;
             text-align: left;
             font-weight: 600;
             font-size: 0.85rem;
@@ -278,12 +317,12 @@ const Dashboard = () => {
             border-bottom: 2px solid #e2e8f0;
           }
 
-          .coin-header {
-            padding-left: 25px;
+          .coin-header, .volume-header {
+            padding-left: 15px;
           }
 
           .rates-table td {
-            padding: 15px;
+            padding: 12px 15px;
             border-bottom: 1px solid #edf2f7;
             vertical-align: middle;
           }
@@ -303,7 +342,7 @@ const Dashboard = () => {
 
           .asset-details-row {
             padding-top: 0 !important;
-            padding-bottom: 10px !important;
+            padding-bottom: 8px !important;
           }
 
           .asset-details {
@@ -350,7 +389,7 @@ const Dashboard = () => {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 60px;
+            padding: 40px;
             color: #718096;
           }
 
@@ -384,19 +423,92 @@ const Dashboard = () => {
             100% { transform: rotate(360deg); }
           }
 
+          /* Mobile Responsive Styles */
           @media (max-width: 768px) {
+            .dashboard-container {
+              padding: 10px;
+              gap: 15px;
+            }
+
+            .rates-section, .balance-section, .tradelog-section, .arbitrage-section {
+              padding: 15px;
+              border-radius: 10px;
+            }
+
             .section-header {
               flex-direction: column;
-              align-items: flex-start;
+              align-items: stretch;
+              gap: 10px;
             }
-            
+
+            .title-container h2 {
+              font-size: 1.3rem;
+            }
+
             .exchange-selector {
               width: 100%;
-              margin-top: 15px;
+              justify-content: space-between;
             }
-            
+
             .exchange-dropdown {
               flex-grow: 1;
+              max-width: 200px;
+            }
+
+            .rates-table th, 
+            .rates-table td {
+              padding: 10px 12px;
+              font-size: 0.9rem;
+            }
+
+            .asset-details {
+              font-size: 0.8rem;
+              padding-left: 10px;
+            }
+
+            .loading-state, .error-state {
+              padding: 30px 20px;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .dashboard-container {
+              padding: 8px;
+            }
+
+            .rates-section, .balance-section, .tradelog-section, .arbitrage-section {
+              padding: 12px;
+            }
+
+            .title-container h2 {
+              font-size: 1.2rem;
+            }
+
+            .subtitle, .update-time {
+              font-size: 0.7rem;
+            }
+
+            .exchange-dropdown {
+              font-size: 0.85rem;
+              padding: 6px 10px;
+            }
+
+            .selector-label {
+              font-size: 0.8rem;
+            }
+
+            .rates-table th {
+              font-size: 0.75rem;
+              padding: 8px 10px;
+            }
+
+            .rates-table td {
+              padding: 8px 10px;
+              font-size: 0.8rem;
+            }
+
+            .asset-details {
+              font-size: 0.75rem;
             }
           }
         `}
